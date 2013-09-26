@@ -1,0 +1,2 @@
+class InvalidPositionError < StandardError
+end
