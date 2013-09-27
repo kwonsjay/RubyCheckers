@@ -1,6 +1,6 @@
 require 'colorize'
 require './pieces'
-require './errors'
+require './error'
 
 class Board
   attr_accessor :grid
@@ -29,13 +29,13 @@ class Board
   end
   
   def[](position)
-    raise "invalid position" unless valid?(position)
+    raise InvalidPositionError.new, "Coordinates out of bounds" unless valid?(position)
     x, y = position
     @grid[x][y]
   end
   
   def[]=(position, piece)
-    raise "invalid position" unless valid?(position)
+    raise InvalidPositionError.new, "Coordinates out of bounds" unless valid?(position)
     x, y = position
     @grid[x][y] = piece
   end
@@ -52,22 +52,12 @@ class Board
     self[abs_position].nil?
   end
   
-  def move(start_loc, target_loc)
-    raise "invalid position" unless valid?(start_loc) && valid?(target_loc)
-    raise "invalid target position" unless self[start_loc].possible_moves.include?(target_loc)
-    diff = difference(target_loc, start_loc)
-    delete_jumped_piece(start_loc, diff) if jumped?(start_loc, diff)
-    self[start_loc].move(target_loc)
-    promote_king(target_loc)
-  end
-  
-  def perform_moves(move_sequence)
-    
-  end
-  
   def promote_king(target_loc)
     promote_condition = (self[target_loc].color == :black) ? 0 : 7
-    self[target_loc].king = true if target_loc.first == promote_condition
+    if target_loc.first == promote_condition
+      self[target_loc].king = true
+      puts "A new King emerges."
+    end
   end
   
   def jumped?(start_loc, diff)
@@ -85,6 +75,48 @@ class Board
   
   def valid?(position)
     position.all? { |num| num.between?(0, 7) }
+  end
+  
+  def same_color?(position, color)
+    self[position].color == color
+  end
+  
+  def move(color, start_loc, target_loc)
+    jumped = false
+    raise InvalidMoveError.new, "Invalid coordinates" unless valid?(start_loc) && valid?(target_loc)
+    raise InvalidMoveError.new, "Can't move there." unless self[start_loc].possible_moves.include?(target_loc)
+    raise InvalidMoveError.new, "Wrong color." unless self[start_loc].color == color
+    diff = difference(target_loc, start_loc)
+    if jumped?(start_loc, diff)
+      delete_jumped_piece(start_loc, diff)
+      jumped = true
+    end
+    self[start_loc].move(target_loc)
+    promote_king(target_loc)
+    jumped
+  end
+  
+  def wipeout?(color)
+    grid.each_index do |row_index|
+      grid.each_index do |col_index|
+        check = grid[row_index][col_index]
+        next if check.nil?
+        return false if check.color == color
+      end
+    end
+    return true
+  end
+  
+  def stuck?(color)
+    total_moves = []
+    grid.each_index do |row_index|
+      grid.each_index do |col_index|
+        check = grid[row_index][col_index]
+        next if check.nil?
+        total_moves << check.possible_moves
+      end
+    end
+    total_moves.empty?
   end
   
   def display

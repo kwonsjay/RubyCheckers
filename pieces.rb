@@ -68,6 +68,33 @@ class Piece
     return jump_position if @board.valid?(jump_position) && @board.empty?(jump_position)
     return []
   end
+  
+  def slide_moves
+    possible_moves = []
+    self.vectors.each do |vector|
+      abs_position = increment(self.position, vector)
+      next unless @board.valid?(abs_position)
+      if @board[abs_position].nil?
+        possible_moves << abs_position
+      end
+    end
+    possible_moves
+  end
+  
+  def jump_moves
+    possible_moves = []
+    self.vectors.each do |vector|
+      abs_position = increment(self.position, vector)
+      next unless @board.valid?(abs_position)
+      if !@board.empty?(abs_position)
+        if @board[abs_position].color != @color
+          jump_move = possible_jump(abs_position, vector)
+          possible_moves << jump_move unless jump_move.empty?
+        end
+      end
+    end
+    possible_moves
+  end
     
   def render
     if @king
